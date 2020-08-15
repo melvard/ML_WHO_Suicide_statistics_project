@@ -1,6 +1,3 @@
-
-----------------------------
-------------------------------
 #importing libraries
 import numpy as np 
 import pandas as pd 
@@ -71,8 +68,8 @@ plt.show()
 
 #predit for any year
 y_pre = regressor.predict([[2025]])
-statistics = pd.DataFrame(columns=['Country', 'suicide_coefficient'])
-
+statistics_withCoefficent = pd.DataFrame(columns=['Country', 'suicide_coefficient'])
+statistics_withCases = pd.DataFrame(columns = ['Country', 'Population_number', 'suicide_cases'])
 
 
 def suicide_coefficient_counter(year, m_country_df):
@@ -87,8 +84,13 @@ def suicide_coefficient_counter(year, m_country_df):
     suicide_coefficient = total_suicides/population
     return suicide_coefficient
     
-
-#using for loop to reach every country dateframe located in dictionary
+def suicide_cases_in_population(year, population_for_cases, m_country_df):
+    total_suicides= m_country_df[m_country_df.year == year].groupby(['age']).sum()['suicides_no'].sum()
+    population = m_country_df[m_country_df.year == year].groupby(['age']).sum()['population'].sum()
+    k = population/population_for_cases
+    print(total_suicides, population, k)
+    return total_suicides/k
+    
 for country_name in Countries_df_dic:
     country_df = Countries_df_dic[country_name]#get value of dic with key
     missing_val_count_by_column = (country_df.isnull().sum())
@@ -113,12 +115,23 @@ for country_name in Countries_df_dic:
             '55-74 years', '75+ years']
     
     #using definition for counting k coefficient of suicide per year
-    choosen_year_for_parsing = 2002;
+    choosen_year_for_parsing = 2014;
+    population_number = 500000;
     k_suicide = suicide_coefficient_counter(choosen_year_for_parsing, country_df) 
-    statistics = statistics.append({'Country': country_name,
+    statistics_withCoefficent = statistics_withCoefficent.append({'Country': country_name,
                                     'suicide_coefficient':k_suicide,
                                     'year':choosen_year_for_parsing},
                                    ignore_index=True)
+    
+    
+    #
+    suicide_cases = suicide_cases_in_population(choosen_year_for_parsing, population_number, country_df)
+    statistics_withCases = statistics_withCases.append({'Country': country_name,
+                                    'Population_number': population_number,
+                                    'suicide_cases': suicide_cases,
+                                    'year':choosen_year_for_parsing},
+                                   ignore_index=True)
+    predicition_forThisCountry = 0;
     for sex in gender_list:
         for age_group in ageGroup_list:
             data_1 = country_df[country_df['sex'] == sex]
@@ -134,18 +147,20 @@ for country_name in Countries_df_dic:
             plt.xlabel('Year')
             plt.ylabel('Suicides number')
             plt.show()
+            predicition_forThisCountry += reg.predict([[2018]])
 
-    predicition_forThisCountry = reg.predict([[2024]])
+    
+    print(country_name +"---Suicides in 2018 will be", predicition_forThisCountry)
     print("\033[1;31;43m", f"y = {reg.intercept_} + {reg.coef_}X","\033[1;37;0m")
     
 
 
+#Creating suicide with coefficient statistics plot 
+import math
 
-stat = statistics
+stat = statistics_withCoefficent
 plt.rcdefaults()
 fig, ax = plt.subplots()
-
-# Example data
 Countries = stat.iloc[:,0]
 y_pos = np.arange(len(Countries))
 performance = stat.iloc[:,1]
@@ -153,388 +168,31 @@ ax.barh(y_pos, performance, align='center')
 ax.set_yticks(y_pos)
 ax.set_yticklabels(Countries)
 ax.invert_yaxis()  # labels read top-to-bottom
-ax.set_xlabel('Suiide coefficient')
+ax.set_xlabel('Suicide coefficient')
 ax.set_title('Suicide coefficient for countries in'+" "+str(stat.year[1]))
 plt.show()
 
+#Creating suicide with cases statistics plot 
 
-
-
-
-
-
-
-
-
-
-
-'''
-missing_val_count_by_column = (Turkey.isnull().sum())
-print(missing_val_count_by_column[missing_val_count_by_column > 0])
-data = Turkey.dropna(axis = 0)  # the lines has null values are deleted
-data.head()
-
-x = np.array(Turkey.loc[:,'year']).reshape(-1,1)
-y = np.array(Turkey.loc[:,'suicides_no']).reshape(-1,1)
-#Scatter Plot
-plt.figure(figsize = [10,10])
-plt.scatter(x=x,y=y,)
-plt.xlabel('Year')
-plt.ylabel('Suicides number')
+stat = statistics_withCases
+plt.rcdefaults()
+fig, ax = plt.subplots()
+Countries = stat.iloc[:,0]
+y_pos = np.arange(len(Countries))
+performance = stat.iloc[:,2]
+ax.barh(y_pos, performance, align='center')
+ax.set_yticks(y_pos)
+ax.set_yticklabels(Countries)
+ax.invert_yaxis()  # labels read top-to-bottom
+ax.set_xlabel('Suicide cases')
+ax.set_title("In "+str(stat.Population_number[1])+' people Suicide cases for countries in'+" "+str(stat.year[3]))
+i = 0
+for suicide_cases in stat.suicide_cases:
+    ax.text(suicide_cases,
+            i,
+            str(0 if math.isnan(suicide_cases) else int(suicide_cases)),
+            fontsize = 15,
+            verticalalignment = "center")
+    i = i+1
 plt.show()
 
-from sklearn.linear_model import LinearRegression
-reg = LinearRegression()
-predict_space = np.linspace(min(x), max(x)).reshape(-1,1)  
-lis = ['female', 'male']
-lis2 = ['5-14 years', '15-24 years', '25-34 years', '35-54 years',
-        '55-74 years', '75+ years']
-for i in lis:
-    for k in lis2:
-        data_1 = Turkey[Turkey['sex'] == i]
-        data_sex = data_1[data_1['age'] == k ]
-        x_sex = np.array(data_sex.loc[:,'year']).reshape(-1,1)
-        y_sex = np.array(data_sex.loc[:,'suicides_no']).reshape(-1,1)
-        reg.fit(x_sex,y_sex)                                              
-        predicted = reg.predict(predict_space)                     
-        print( i, k, 'R^2 Score: ', reg.score(x_sex,y_sex))                       
-        plt.plot(predict_space, predicted, color = 'black', linewidth = 2)
-        plt.scatter(x_sex,y_sex)
-        plt.title('Scatter Plot')
-        plt.xlabel('Year')
-        plt.ylabel('Suicides number')
-        plt.show()
-
-Tu_pred = reg.predict([[2025]])
-
-print(f"y = {reg.intercept_} + {reg.coef_}X")
-
-
-#Azerbaijan
-
-
-missing_val_count_by_column = (Azerbaijan.isnull().sum())
-print(missing_val_count_by_column[missing_val_count_by_column > 0])
-data = Azerbaijan.dropna(axis = 0)  # the lines has null values are deleted
-data.head()
-
-x = np.array(Azerbaijan.loc[:,'year']).reshape(-1,1)
-y = np.array(Azerbaijan.loc[:,'suicides_no']).reshape(-1,1)
-#Scatter Plot
-plt.figure(figsize = [10,10])
-plt.scatter(x=x,y=y,)
-plt.xlabel('Year')
-plt.ylabel('Suicides number')
-plt.show()
-
-from sklearn.linear_model import LinearRegression
-reg = LinearRegression()
-predict_space = np.linspace(min(x), max(x)).reshape(-1,1)  
-lis = ['female', 'male']
-lis2 = ['5-14 years', '15-24 years', '25-34 years', '35-54 years',
-        '55-74 years', '75+ years']
-for i in lis:
-    for k in lis2:
-        data_1 = Turkey[Turkey['sex'] == i]
-        data_sex = data_1[data_1['age'] == k ]
-        x_sex = np.array(data_sex.loc[:,'year']).reshape(-1,1)
-        y_sex = np.array(data_sex.loc[:,'suicides_no']).reshape(-1,1)
-        reg.fit(x_sex,y_sex)                                              
-        predicted = reg.predict(predict_space)                     
-        print( i, k, 'R^2 Score: ', reg.score(x_sex,y_sex))                       
-        plt.plot(predict_space, predicted, color = 'black', linewidth = 2)
-        plt.scatter(x_sex,y_sex)
-        plt.title('Scatter Plot')
-        plt.xlabel('Year')
-        plt.ylabel('Suicides number')
-        plt.show()
-
-Az_pred = reg.predict([[2025]])
-
-
-#Georgia
-
-missing_val_count_by_column = (Georgia.isnull().sum())
-print(missing_val_count_by_column[missing_val_count_by_column > 0])
-data = Georgia.dropna(axis = 0)  # the lines has null values are deleted
-data.head()
-
-x = np.array(Georgia.loc[:,'year']).reshape(-1,1)
-y = np.array(Georgia.loc[:,'suicides_no']).reshape(-1,1)
-#Scatter Plot
-plt.figure(figsize = [10,10])
-plt.scatter(x=x,y=y,)
-plt.xlabel('Year')
-plt.ylabel('Suicides number')
-plt.show()
-
-from sklearn.linear_model import LinearRegression
-reg = LinearRegression()
-predict_space = np.linspace(min(x), max(x)).reshape(-1,1)  
-lis = ['female', 'male']
-lis2 = ['5-14 years', '15-24 years', '25-34 years', '35-54 years',
-        '55-74 years', '75+ years']
-for i in lis:
-    for k in lis2:
-        data_1 = Turkey[Turkey['sex'] == i]
-        data_sex = data_1[data_1['age'] == k ]
-        x_sex = np.array(data_sex.loc[:,'year']).reshape(-1,1)
-        y_sex = np.array(data_sex.loc[:,'suicides_no']).reshape(-1,1)
-        reg.fit(x_sex,y_sex)                                              
-        predicted = reg.predict(predict_space)                     
-        print( i, k, 'R^2 Score: ', reg.score(x_sex,y_sex))                       
-        plt.plot(predict_space, predicted, color = 'black', linewidth = 2)
-        plt.scatter(x_sex,y_sex)
-        plt.title('Scatter Plot')
-        plt.xlabel('Year')
-        plt.ylabel('Suicides number')
-        plt.show()
-
-G_pred = reg.predict([[2025]])
-
-
-#Iran
-
-missing_val_count_by_column = (Iran.isnull().sum())
-print(missing_val_count_by_column[missing_val_count_by_column > 0])
-data = Iran.dropna(axis = 0)  # the lines has null values are deleted
-data.head()
-
-x = np.array(Iran.loc[:,'year']).reshape(-1,1)
-y = np.array(Iran.loc[:,'suicides_no']).reshape(-1,1)
-#Scatter Plot
-plt.figure(figsize = [10,10])
-plt.scatter(x=x,y=y,)
-plt.xlabel('Year')
-plt.ylabel('Suicides number')
-plt.show()
-
-from sklearn.linear_model import LinearRegression
-reg = LinearRegression()
-predict_space = np.linspace(min(x), max(x)).reshape(-1,1)  
-lis = ['female', 'male']
-lis2 = ['5-14 years', '15-24 years', '25-34 years', '35-54 years',
-        '55-74 years', '75+ years']
-for i in lis:
-    for k in lis2:
-        data_1 = Turkey[Turkey['sex'] == i]
-        data_sex = data_1[data_1['age'] == k ]
-        x_sex = np.array(data_sex.loc[:,'year']).reshape(-1,1)
-        y_sex = np.array(data_sex.loc[:,'suicides_no']).reshape(-1,1)
-        reg.fit(x_sex,y_sex)                                              
-        predicted = reg.predict(predict_space)                     
-        print( i, k, 'R^2 Score: ', reg.score(x_sex,y_sex))                       
-        plt.plot(predict_space, predicted, color = 'black', linewidth = 2)
-        plt.scatter(x_sex,y_sex)
-        plt.title('Scatter Plot')
-        plt.xlabel('Year')
-        plt.ylabel('Suicides number')
-        plt.show()
-
-Ir_pred = reg.predict([[2025]])
-
-
-#Germany
-
-missing_val_count_by_column = (Germany.isnull().sum())
-print(missing_val_count_by_column[missing_val_count_by_column > 0])
-data = Germany.dropna(axis = 0)  # the lines has null values are deleted
-data.head()
-
-x = np.array(Germany.loc[:,'year']).reshape(-1,1)
-y = np.array(Germany.loc[:,'suicides_no']).reshape(-1,1)
-#Scatter Plot
-plt.figure(figsize = [10,10])
-plt.scatter(x=x,y=y,)
-plt.xlabel('Year')
-plt.ylabel('Suicides number')
-plt.show()
-
-from sklearn.linear_model import LinearRegression
-reg = LinearRegression()
-predict_space = np.linspace(min(x), max(x)).reshape(-1,1)  
-lis = ['female', 'male']
-lis2 = ['5-14 years', '15-24 years', '25-34 years', '35-54 years',
-        '55-74 years', '75+ years']
-for i in lis:
-    for k in lis2:
-        data_1 = Turkey[Turkey['sex'] == i]
-        data_sex = data_1[data_1['age'] == k ]
-        x_sex = np.array(data_sex.loc[:,'year']).reshape(-1,1)
-        y_sex = np.array(data_sex.loc[:,'suicides_no']).reshape(-1,1)
-        reg.fit(x_sex,y_sex)                                              
-        predicted = reg.predict(predict_space)                     
-        print( i, k, 'R^2 Score: ', reg.score(x_sex,y_sex))                       
-        plt.plot(predict_space, predicted, color = 'black', linewidth = 2)
-        plt.scatter(x_sex,y_sex)
-        plt.title('Scatter Plot')
-        plt.xlabel('Year')
-        plt.ylabel('Suicides number')
-        plt.show()
-
-Ger_pred = reg.predict([[2025]])
-
-
-#Italy
-
-missing_val_count_by_column = (Italy.isnull().sum())
-print(missing_val_count_by_column[missing_val_count_by_column > 0])
-data = Italy.dropna(axis = 0)  # the lines has null values are deleted
-data.head()
-
-x = np.array(Italy.loc[:,'year']).reshape(-1,1)
-y = np.array(Italy.loc[:,'suicides_no']).reshape(-1,1)
-#Scatter Plot
-plt.figure(figsize = [10,10])
-plt.scatter(x=x,y=y,)
-plt.xlabel('Year')
-plt.ylabel('Suicides number')
-plt.show()
-
-from sklearn.linear_model import LinearRegression
-reg = LinearRegression()
-predict_space = np.linspace(min(x), max(x)).reshape(-1,1)  
-lis = ['female', 'male']
-lis2 = ['5-14 years', '15-24 years', '25-34 years', '35-54 years',
-        '55-74 years', '75+ years']
-for i in lis:
-    for k in lis2:
-        data_1 = Turkey[Turkey['sex'] == i]
-        data_sex = data_1[data_1['age'] == k ]
-        x_sex = np.array(data_sex.loc[:,'year']).reshape(-1,1)
-        y_sex = np.array(data_sex.loc[:,'suicides_no']).reshape(-1,1)
-        reg.fit(x_sex,y_sex)                                              
-        predicted = reg.predict(predict_space)                     
-        print( i, k, 'R^2 Score: ', reg.score(x_sex,y_sex))                       
-        plt.plot(predict_space, predicted, color = 'black', linewidth = 2)
-        plt.scatter(x_sex,y_sex)
-        plt.title('Scatter Plot')
-        plt.xlabel('Year')
-        plt.ylabel('Suicides number')
-        plt.show()
-
-It_pred = reg.predict([[2025]])
-
-
-#Japan
-
-missing_val_count_by_column = (Japan.isnull().sum())
-print(missing_val_count_by_column[missing_val_count_by_column > 0])
-data = Japan.dropna(axis = 0)  # the lines has null values are deleted
-data.head()
-
-x = np.array(Japan.loc[:,'year']).reshape(-1,1)
-y = np.array(Japan.loc[:,'suicides_no']).reshape(-1,1)
-#Scatter Plot
-plt.figure(figsize = [10,10])
-plt.scatter(x=x,y=y,)
-plt.xlabel('Year')
-plt.ylabel('Suicides number')
-plt.show()
-
-from sklearn.linear_model import LinearRegression
-reg = LinearRegression()
-predict_space = np.linspace(min(x), max(x)).reshape(-1,1)  
-lis = ['female', 'male']
-lis2 = ['5-14 years', '15-24 years', '25-34 years', '35-54 years',
-        '55-74 years', '75+ years']
-for i in lis:
-    for k in lis2:
-        data_1 = Turkey[Turkey['sex'] == i]
-        data_sex = data_1[data_1['age'] == k ]
-        x_sex = np.array(data_sex.loc[:,'year']).reshape(-1,1)
-        y_sex = np.array(data_sex.loc[:,'suicides_no']).reshape(-1,1)
-        reg.fit(x_sex,y_sex)                                              
-        predicted = reg.predict(predict_space)                     
-        print( i, k, 'R^2 Score: ', reg.score(x_sex,y_sex))                       
-        plt.plot(predict_space, predicted, color = 'black', linewidth = 2)
-        plt.scatter(x_sex,y_sex)
-        plt.title('Scatter Plot')
-        plt.xlabel('Year')
-        plt.ylabel('Suicides number')
-        plt.show()
-
-Ja_pred = reg.predict([[2025]])
-
-
-
-#Russian
-
-missing_val_count_by_column = (Russian.isnull().sum())
-print(missing_val_count_by_column[missing_val_count_by_column > 0])
-data = Russian.dropna(axis = 0)  # the lines has null values are deleted
-data.head()
-
-x = np.array(Russian.loc[:,'year']).reshape(-1,1)
-y = np.array(Russian.loc[:,'suicides_no']).reshape(-1,1)
-#Scatter Plot
-plt.figure(figsize = [10,10])
-plt.scatter(x=x,y=y,)
-plt.xlabel('Year')
-plt.ylabel('Suicides number')
-plt.show()
-
-from sklearn.linear_model import LinearRegression
-reg = LinearRegression()
-predict_space = np.linspace(min(x), max(x)).reshape(-1,1)  
-lis = ['female', 'male']
-lis2 = ['5-14 years', '15-24 years', '25-34 years', '35-54 years',
-        '55-74 years', '75+ years']
-for i in lis:
-    for k in lis2:
-        data_1 = Turkey[Turkey['sex'] == i]
-        data_sex = data_1[data_1['age'] == k ]
-        x_sex = np.array(data_sex.loc[:,'year']).reshape(-1,1)
-        y_sex = np.array(data_sex.loc[:,'suicides_no']).reshape(-1,1)
-        reg.fit(x_sex,y_sex)                                              
-        predicted = reg.predict(predict_space)                     
-        print( i, k, 'R^2 Score: ', reg.score(x_sex,y_sex))                       
-        plt.plot(predict_space, predicted, color = 'black', linewidth = 2)
-        plt.scatter(x_sex,y_sex)
-        plt.title('Scatter Plot')
-        plt.xlabel('Year')
-        plt.ylabel('Suicides number')
-        plt.show()
-
-Ru_pred = reg.predict([[2025]])
-
-
-#USA
-
-missing_val_count_by_column = (USA.isnull().sum())
-print(missing_val_count_by_column[missing_val_count_by_column > 0])
-data = USA.dropna(axis = 0)  # the lines has null values are deleted
-data.head()
-
-x = np.array(USA.loc[:,'year']).reshape(-1,1)
-y = np.array(USA.loc[:,'suicides_no']).reshape(-1,1)
-#Scatter Plot
-plt.figure(figsize = [10,10])
-plt.scatter(x=x,y=y,)
-plt.xlabel('Year')
-plt.ylabel('Suicides number')
-plt.show()
-
-from sklearn.linear_model import LinearRegression
-reg = LinearRegression()
-predict_space = np.linspace(min(x), max(x)).reshape(-1,1)  
-lis = ['female', 'male']
-lis2 = ['5-14 years', '15-24 years', '25-34 years', '35-54 years',
-        '55-74 years', '75+ years']
-for i in lis:
-    for k in lis2:
-        data_1 = Turkey[Turkey['sex'] == i]
-        data_sex = data_1[data_1['age'] == k ]
-        x_sex = np.array(data_sex.loc[:,'year']).reshape(-1,1)
-        y_sex = np.array(data_sex.loc[:,'suicides_no']).reshape(-1,1)
-        reg.fit(x_sex,y_sex)                                              
-        predicted = reg.predict(predict_space)                     
-        print( i, k, 'R^2 Score: ', reg.score(x_sex,y_sex))                       
-        plt.plot(predict_space, predicted, color = 'black', linewidth = 2)
-        plt.scatter(x_sex,y_sex)
-        plt.title('Scatter Plot')
-        plt.xlabel('Year')
-        plt.ylabel('Suicides number')
-        plt.show()
-
-USA_pred = reg.predict([[2025]])'''
