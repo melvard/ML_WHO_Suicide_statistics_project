@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
-
+from math import isnan
 
 
 df = pd.read_csv('suicide.csv')
@@ -70,8 +70,8 @@ plt.show()
 y_pre = regressor.predict([[2025]])
 
 #create empty dataframes to add countries with suicide statistics
-statistics_withCoefficent = pd.DataFrame(columns=['Country', 'suicide_coefficient'])
-statistics_withCases = pd.DataFrame(columns = ['Country', 'Population_number', 'suicide_cases'])
+statistics_withCoefficent = pd.DataFrame(columns=['country', 'suicide_coefficient'])
+statistics_withCases = pd.DataFrame(columns = ['country', 'suicide_cases', 'year', 'population'])
 
 
 def suicide_coefficient_counter(year, m_country_df):
@@ -87,12 +87,10 @@ def suicide_coefficient_counter(year, m_country_df):
     
     return suicide_coefficient
     
-def suicide_cases_in_population(year, population_for_cases, m_country_df):
+def suicide_cases_in_population(year, m_country_df):
     total_suicides= m_country_df[m_country_df.year == year].groupby(['age']).sum()['suicides_no'].sum()
     population = m_country_df[m_country_df.year == year].groupby(['age']).sum()['population'].sum()
-    k = population/population_for_cases
-    print(total_suicides, population, k)
-    return total_suicides/k
+    return [total_suicides, population]
 
 def predict_and_createplot_for_country(m_counrty_df,gender_list, ageGroup_list, year):
     country_name = m_counrty_df['country'].iloc[0]
@@ -136,69 +134,82 @@ def predict_and_createplot_for_country(m_counrty_df,gender_list, ageGroup_list, 
 
     
 for country_name in Countries_df_dic:
+    predict_year = 1991;
+    
     country_df = Countries_df_dic[country_name]#get country dataframe of dic with key
-    predict_and_createplot_for_country(country_df, gender_list, ageGroup_list, 2021)
+    predict_and_createplot_for_country(country_df, gender_list, ageGroup_list, predict_year)
+    
+    for every_year in country_df.year.unique():
+        #using definition for counting k coefficient of suicide per year
+
+        k_suicide = suicide_coefficient_counter(every_year, country_df) 
+        statistics_withCoefficent = statistics_withCoefficent.append({'country': country_name,
+                                        'suicide_coefficient':k_suicide,
+                                        'year':every_year},
+                                       ignore_index=True)
     
     
-    #using definition for counting k coefficient of suicide per year
-    choosen_year_for_parsing = 1991;
-    population_number = 100000;
-    k_suicide = suicide_coefficient_counter(choosen_year_for_parsing, country_df) 
-    statistics_withCoefficent = statistics_withCoefficent.append({'Country': country_name,
-                                    'suicide_coefficient':k_suicide,
-                                    'year':choosen_year_for_parsing},
-                                   ignore_index=True)
-    
-    
-    #using definition for counting suicide cases in custom population 
-    suicide_cases = suicide_cases_in_population(choosen_year_for_parsing, population_number, country_df)
-    statistics_withCases = statistics_withCases.append({'Country': country_name,
-                                    'Population_number': population_number,
-                                    'suicide_cases': suicide_cases,
-                                    'year':choosen_year_for_parsing},
-                                   ignore_index=True)
-  
+        #using definition for counting suicide cases in custom population 
+        
+        suicide_cases_and_population = suicide_cases_in_population(every_year, country_df)
+        statistics_withCases = statistics_withCases.append({'country': country_name,
+                                        'population': suicide_cases_and_population[1],
+                                        'suicide_cases': suicide_cases_and_population[0],
+                                        'year':every_year},
+                                       ignore_index=True)
+      
 
 #Creating suicide with coefficient statistics plot 
-import math
 
-stat = statistics_withCoefficent
-plt.rcdefaults()
-fig, ax = plt.subplots()
-Countries = stat.iloc[:,0]
-y_pos = np.arange(len(Countries))
-performance = stat.iloc[:,1]
-ax.barh(y_pos, performance, align='center')
-ax.set_yticks(y_pos)
-ax.set_yticklabels(Countries)
-ax.invert_yaxis()  # labels read top-to-bottom
-ax.set_xlabel('Suicide coefficient')
-ax.set_title('Suicide coefficient for countries in'+" "+str(stat.year[1]))
-plt.show()
-
+def create_suicide_statisticsWithCoefficient_plot_for_year(year, statisticsCoeff):
+    stat = statisticsCoeff[statisticsCoeff.year ==year]
+    print(stat)
+    plt.rcdefaults()
+    fig, ax = plt.subplots()
+    countries = stat.iloc[:,0]
+    y_pos = np.arange(len(countries))
+    performance = stat.iloc[:,1]
+    ax.barh(y_pos, performance, align='center')
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(countries)
+    ax.invert_yaxis()  # labels read top-to-bottom
+    ax.set_xlabel('Suicide coefficient')
+    ax.set_title('Suicide coefficient for countries in'+" "+str(year))
+    plt.show()
+    
 
 #Creating suicide with cases statistics plot 
-stat = statistics_withCases
-plt.rcdefaults()
-fig, ax = plt.subplots()
-Countries = stat.iloc[:,0]
-y_pos = np.arange(len(Countries))
-performance = stat.iloc[:,2]
-ax.barh(y_pos, performance, align='center')
-ax.set_yticks(y_pos)
-ax.set_yticklabels(Countries)
-ax.invert_yaxis()  # labels read top-to-bottom
-ax.set_xlabel('Suicide cases')
-ax.set_title("In "+str(stat.Population_number[1])+' people Suicide cases for countries in'+" "+str(stat.year[3]))
-i = 0
-for suicide_cases in stat.suicide_cases:
-    ax.text(suicide_cases,
-            i,
-            str(np.around(suicide_cases, 2) if math.isnan(suicide_cases) or( suicide_cases<1 )else int(suicide_cases)),
-            fontsize = 15,
-            verticalalignment = "center")
-    i = i+1
-plt.show()
+def create_suicide_statisticsWithCases_plot_for_year(year, inpopulation, statisticsCases):
+    stat = statisticsCases[statisticsCases.year == year]
+    
+    for index, row in stat.iterrows():
+        stat.at[index,'suicide_cases'] = stat.suicide_cases[index]/(stat.population[index]/inpopulation)
+        stat.at[index,'population'] = inpopulation
+    print(stat)
+    plt.rcdefaults()
+    fig, ax = plt.subplots()
+    countries = stat.iloc[:,0]
+    y_pos = np.arange(len(countries))
+    performance = stat.iloc[:,1]
+    ax.barh(y_pos, performance, align='center')
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(countries)
+    ax.invert_yaxis()  # labels read top-to-bottom
+    ax.set_xlabel('Suicide cases')
+    ax.set_title("In "+str(inpopulation)+' people Suicide cases for countries in'+" "+str(year))
+    i = 0
+    for suicide_cases in stat.suicide_cases:
+        ax.text(suicide_cases,
+                i,
+                str(np.around(suicide_cases, 2) if isnan(suicide_cases) or( suicide_cases<1 )else int(suicide_cases)),
+                fontsize = 15,
+                verticalalignment = "center")
+        i = i+1
+    plt.show()
+
+
+create_suicide_statisticsWithCoefficient_plot_for_year(2012, statistics_withCoefficent)
+create_suicide_statisticsWithCases_plot_for_year(2015, 1000000, statistics_withCases)
 
 #predict example (just change country key name of dictionary to predict and create plots)
 predict_and_createplot_for_country(Countries_df_dic['Russian'], gender_list, ageGroup_list, 2021)
