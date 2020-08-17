@@ -158,12 +158,12 @@ for country_name in Countries_df_dic:
                                         'year':every_year},
                                        ignore_index=True)
       
+'''' PLOT CREATING FUNCTIONS AND FUNCTIONS CALLS '''
 
 #Creating suicide with coefficient statistics plot 
 
 def create_suicide_statisticsWithCoefficient_plot_for_year(year, statisticsCoeff):
     stat = statisticsCoeff[statisticsCoeff.year ==year]
-    print(stat)
     plt.rcdefaults()
     fig, ax = plt.subplots()
     countries = stat.iloc[:,0]
@@ -177,15 +177,14 @@ def create_suicide_statisticsWithCoefficient_plot_for_year(year, statisticsCoeff
     ax.set_title('Suicide coefficient for countries in'+" "+str(year))
     plt.show()
     
-
 #Creating suicide with cases statistics plot 
+    
 def create_suicide_statisticsWithCases_plot_for_year(year, inpopulation, statisticsCases):
     stat = statisticsCases[statisticsCases.year == year]
     
     for index, row in stat.iterrows():
         stat.at[index,'suicide_cases'] = stat.suicide_cases[index]/(stat.population[index]/inpopulation)
         stat.at[index,'population'] = inpopulation
-    print(stat)
     plt.rcdefaults()
     fig, ax = plt.subplots()
     countries = stat.iloc[:,0]
@@ -207,10 +206,103 @@ def create_suicide_statisticsWithCases_plot_for_year(year, inpopulation, statist
         i = i+1
     plt.show()
 
+def show_suicide_statistics_inrange_forcountry(startYear, endYear, inpopulation, statisticsCases, country_name):
+    stat = statisticsCases[statisticsCases.country == country_name]
+    stat = stat[(stat.year >= startYear) & (stat.year <=endYear)]
+    
+    for index,row in stat.iterrows():
+        stat.at[index,'suicide_cases'] = stat.suicide_cases[index]/(stat.population[index]/inpopulation)
+        stat.at[index, 'population'] = inpopulation
+        
+        
+    plt.rcdefaults()
+    #use this one to show results with line graphics
+    fig, ax = plt.subplots()
+    xlabel = stat.iloc[:,2]
+    ylabel = stat.iloc[:,1]
+    ax.plot(xlabel,ylabel)
+    
+    ax.set(xlabel='Years', ylabel='Suicides',
+       title="In "+str(inpopulation)+' people Suicide cases for ' +country_name+' from '+ str(startYear)+' to ' + str(endYear))
+    ax.grid()
+    i=startYear
+    for suicide_cases in stat.suicide_cases:
+        ax.text(i,
+                suicide_cases,
+                str(np.around(suicide_cases, 2) if isnan(suicide_cases) or( suicide_cases<1 )else int(suicide_cases)),
+                fontsize = 10,
+                verticalalignment = "bottom",
+                )
+        i = i+1
+    plt.show()
 
+    #use this one to show results with histographs
+    '''
+    years = stat.iloc[:,2]
+    y_pos = np.arange(len(years))
+    performance = stat.iloc[:,1]
+    ax.barh(y_pos, performance, align='center')
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(years)
+    ax.invert_yaxis()  # labels read top-to-bottom
+    ax.set_xlabel('Suicide cases')
+    ax.set_title("In "+str(inpopulation)+' people Suicide cases for ' +country_name+' from '+ str(startYear)+' to ' + str(endYear))
+    i = 0
+    for suicide_cases in stat.suicide_cases:
+        ax.text(suicide_cases,
+                i,
+                str(np.around(suicide_cases, 2) if isnan(suicide_cases) or( suicide_cases<1 )else int(suicide_cases)),
+                fontsize = 15,
+                verticalalignment = "center")
+        i = i+1
+    plt.show()
+    
+    '''
+
+def show_pie_for_country_suicdecases(year, inpopulation, statisticsCases):
+    stat = statisticsCases[statisticsCases.year == year]
+    
+    countries_cases = {}
+    
+    for index, row in stat.iterrows():
+        stat.at[index,'suicide_cases'] = stat.suicide_cases[index]/(stat.population[index]/inpopulation)
+        stat.at[index,'population'] = inpopulation
+       #countries_cases.append(f'{stat.at[index,"suicide_cases"]} {stat.country[index]}')
+        countries_cases[stat.at[index,"suicide_cases"]] = stat.country[index] 
+    fig, ax = plt.subplots(figsize=(6, 3), subplot_kw=dict(aspect="equal"))
+    
+    
+    
+    data = [float(key) for key in countries_cases]
+    ingredients = [countries_cases[key] for key in countries_cases]
+    
+    
+    def func(pct, allvals):
+        absolute = int(pct/100.*np.sum(allvals))
+        return "{:d} ({:.0f}%)".format(absolute, pct)
+    
+    
+    wedges, texts, autotexts = ax.pie(data, autopct=lambda pct: func(pct, data),
+                                      textprops=dict(color="white"))
+    
+    ax.legend(wedges, ingredients,
+              title="Countries",
+              loc="center left",
+              bbox_to_anchor=(1, 0, 0.5, 1))
+    
+    plt.setp(autotexts, size=8, weight="bold")
+    
+    ax.set_title( f"In {inpopulation} suicide cases in {year}")
+    
+    plt.show()
+    
+#show statistics with plots and graphics
 create_suicide_statisticsWithCoefficient_plot_for_year(2012, statistics_withCoefficent)
 create_suicide_statisticsWithCases_plot_for_year(2015, 1000000, statistics_withCases)
+show_suicide_statistics_inrange_forcountry(2010,2016,500000,statistics_withCases, 'Armenia')
+show_pie_for_country_suicdecases(2015, 1000000, statistics_withCases)
+
 
 #predict example (just change country key name of dictionary to predict and create plots)
-predict_and_createplot_for_country(Countries_df_dic['Russian'], gender_list, ageGroup_list, 2021)
+predict_and_createplot_for_country(Countries_df_dic['Armenia'], gender_list, ageGroup_list, 2070)
 
