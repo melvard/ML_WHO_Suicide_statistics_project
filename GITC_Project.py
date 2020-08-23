@@ -14,11 +14,6 @@ df.year.sort_values().unique()
 
 df.age.unique()
 
-dd =df.isnull()
-
-ss = df.groupby(['country','year']).sum()
-df.groupby(['country','year']).sum()
-
 
 #creating lists for every group for loops
 gender_list = ['female', 'male']
@@ -33,11 +28,11 @@ Countries_df_dic ={"Armenia": df[df.country == 'Armenia'],
                    "Turkey":df[df.country == 'Turkey'],
                    "Azerbaijan":df[df.country == 'Azerbaijan'],
                    "Georgia":df[df.country == 'Georgia'],
-                   "Iran (Islamic Rep of)":df[df.country == 'Iran (Islamic Rep of)'],
+                   "Iran":df[df.country == 'Iran (Islamic Rep of)'],
                    "Germany":df[df.country == 'Germany'],
                    "Italy": df[df.country == 'Italy'],
                    "Japan": df[df.country == 'Japan'],
-                   "Russian": df[df.country =='Russian Federation'],
+                   "Russia": df[df.country =='Russian Federation'],
                    "USA":df[df.country == 'United States of America']
                    }
 
@@ -76,10 +71,8 @@ statistics_withCases = pd.DataFrame(columns = ['country', 'suicide_cases', 'year
 
 def suicide_coefficient_counter(year, m_country_df):
     '''
-    Defintion for counting k coefficient for custom year and country_dateframe.
-    k = suicide_number(per_year)/population(year)
-    
-    :returns k coefficient
+    Ստանալով ցանկալի տարին և տալով երկրի dataframe-ը կստանաք ինքնասպանությունների
+    k գործակից (returns suicide_coefficient)
     '''
     total_suicides= m_country_df[m_country_df.year == year].groupby(['age']).sum()['suicides_no'].sum()
     population = m_country_df[m_country_df.year == year].groupby(['age']).sum()['population'].sum()
@@ -88,11 +81,23 @@ def suicide_coefficient_counter(year, m_country_df):
     return suicide_coefficient
     
 def suicide_cases_in_population(year, m_country_df):
+    '''
+    Ստանալով տարին, երկրի dataframe-ը՝ վերադարձնում է dataframe երկրի բոլոր
+    յունիք տարիներով ինքնասպանության դեպքերի քանակները և այդ երկրում այդ տարին
+    ամբողջ բնակչության քանակը
+    
+    '''
     total_suicides= m_country_df[m_country_df.year == year].groupby(['age']).sum()['suicides_no'].sum()
     population = m_country_df[m_country_df.year == year].groupby(['age']).sum()['population'].sum()
     return [total_suicides, population]
 
 def predict_and_createplot_for_country(m_counrty_df,gender_list, ageGroup_list, year):
+    '''
+    Ստանալով երկիրը և տարին, կազմում է տվյալ երկրի բոլոր թվականների ստատիստիկան
+    (պլոտերով), անում հնարավոր ինքնասպանության դեպքերի predict նշված year
+    պարամետրի համար։ Վերադարձնում է նաև ռեգրեսիայի հաշվման բանաձև։
+    
+    '''
     country_name = m_counrty_df['country'].iloc[0]
     missing_val_count_by_column = (m_counrty_df.isnull().sum())
     #print(missing_val_count_by_column[missing_val_count_by_column > 0])
@@ -134,6 +139,11 @@ def predict_and_createplot_for_country(m_counrty_df,gender_list, ageGroup_list, 
 
     
 for country_name in Countries_df_dic:
+    '''
+    Ցիկլում կանչվում է կանխատեսման ֆունկցիան ամեն երկրի համար և  ստատիստիկա
+    հաշվող ֆունկցիաներով հաշվում և ավելացնում երկրի ստատիստիկ տվյալները 
+    համապատասխանաբար statistics_withCoefficent-ում և statistics_withCases-ում
+    '''
     predict_year = 1991;
     
     country_df = Countries_df_dic[country_name]#get country dataframe of dic with key
@@ -156,13 +166,39 @@ for country_name in Countries_df_dic:
                                         'population': suicide_cases_and_population[1],
                                         'suicide_cases': suicide_cases_and_population[0],
                                         'year':every_year},
-                                       ignore_index=True)
-      
+                                       ignore_index=True)   
+        
 '''' PLOT CREATING FUNCTIONS AND FUNCTIONS CALLS '''
 
-#Creating suicide with coefficient statistics plot 
 
+def readable_numbers_for_plot_titles(number):
+    '''
+    This function is used to add points to population numbers to get much more
+    readable ones.
+    
+    '''
+    if isinstance(number, int):
+        number = str(number)
+    lenght = len(number)
+    number = number[::-1]#reverse string
+    final_string = ''
+    for i in range(0,lenght,3):
+        part = number[i:i+3] # get every hetrick
+        if (i+3 < lenght):
+            final_string +=part+"." #add every hetrick with '.'
+        else:
+            final_string += part #if it is last hetrick add it without '.'
+    return final_string[::-1]#reverse string and return as result
+
+#Creating suicide with coefficient statistics plot   
 def create_suicide_statisticsWithCoefficient_plot_for_year(year, statisticsCoeff):
+    '''
+    Ստանում է տարին, ստանում է գործակիցներով ստատիստիկայի dataframe 
+    (օր․ statistics_withCoefficent) ու վերադարձնում է նշված տարվա համար 
+    սպանվածների թվի գործակից ամեն երկրի համար (գրաֆիկորեն պատկերում պլոտի
+    միջոցով)
+    
+    '''
     stat = statisticsCoeff[statisticsCoeff.year ==year]
     plt.rcdefaults()
     fig, ax = plt.subplots()
@@ -180,8 +216,14 @@ def create_suicide_statisticsWithCoefficient_plot_for_year(year, statisticsCoeff
 #Creating suicide with cases statistics plot 
     
 def create_suicide_statisticsWithCases_plot_for_year(year, inpopulation, statisticsCases):
-    stat = statisticsCases[statisticsCases.year == year]
     
+    '''
+    Ստանում է տարին, ստանում է քանակ թե որքան բնակչության մեջ ստատիստիկա ցույց
+    տա, ստատիստիկաների dataframe-ը (օր․ statistics_withCases) ու վերադարձնում է
+    նշած բնակչության հաշվով սպանությունների թիվը երկրներում ( պլոտի տեսքով)
+    
+    '''
+    stat = statisticsCases[statisticsCases.year == year]
     for index, row in stat.iterrows():
         stat.at[index,'suicide_cases'] = stat.suicide_cases[index]/(stat.population[index]/inpopulation)
         stat.at[index,'population'] = inpopulation
@@ -195,7 +237,10 @@ def create_suicide_statisticsWithCases_plot_for_year(year, inpopulation, statist
     ax.set_yticklabels(countries)
     ax.invert_yaxis()  # labels read top-to-bottom
     ax.set_xlabel('Suicide cases')
-    ax.set_title("In "+str(inpopulation)+' people Suicide cases for countries in'+" "+str(year))
+    ax.set_title("In "
+                 + readable_numbers_for_plot_titles(inpopulation)
+                 + ' people Suicide cases for countries in'
+                 + " " + str(year))
     i = 0
     for suicide_cases in stat.suicide_cases:
         ax.text(suicide_cases,
@@ -207,6 +252,13 @@ def create_suicide_statisticsWithCases_plot_for_year(year, inpopulation, statist
     plt.show()
 
 def show_suicide_statistics_inrange_forcountry(startYear, endYear, inpopulation, statisticsCases, country_name):
+    '''
+    Ստանում է տարիների միջակայք, հաշվարկի համար ցանկալի բնակչության քանակի մեջ
+    թիվը, ստատիստիկաների daraframe (օրինակ․ statistics_withCases,), երկրի անուն
+    և մեզ վերդարձնում է տարիների ընթացքում ինքնասպանությունների փոփոխվող
+    պրոգրեսիան տվյալ երկրի համար։
+    
+    '''
     stat = statisticsCases[statisticsCases.country == country_name]
     stat = stat[(stat.year >= startYear) & (stat.year <=endYear)]
     
@@ -223,17 +275,22 @@ def show_suicide_statistics_inrange_forcountry(startYear, endYear, inpopulation,
     ax.plot(xlabel,ylabel)
     
     ax.set(xlabel='Years', ylabel='Suicides',
-       title="In "+str(inpopulation)+' people Suicide cases for ' +country_name+' from '+ str(startYear)+' to ' + str(endYear))
+       title="In "
+       +readable_numbers_for_plot_titles(inpopulation)
+       +' people Suicide cases for ' +country_name+' from '
+       + str(startYear)+' to ' + str(endYear))
     ax.grid()
     i=startYear
     for suicide_cases in stat.suicide_cases:
         ax.text(i,
                 suicide_cases,
-                str(np.around(suicide_cases, 2) if isnan(suicide_cases) or( suicide_cases<1 )else int(suicide_cases)),
+                str(np.around(suicide_cases, 2) if isnan(suicide_cases) 
+                    or( suicide_cases<1 )else int(suicide_cases)),
                 fontsize = 10,
                 verticalalignment = "bottom",
                 )
         i = i+1
+        
     plt.show()
 
     #use this one to show results with histographs
@@ -258,8 +315,52 @@ def show_suicide_statistics_inrange_forcountry(startYear, endYear, inpopulation,
     plt.show()
     
     '''
+    
+def show_suicide_statistics_inrange_forcountries(startYear, endYear, inpopulation, statisticsCases, country_name_list):
+    '''
+    Ստանում է տարիների միջակայք, հաշվարկի համար ցանկալի բնակչության քանակի մեջ
+    թիվը, ստատիստիկաների daraframe (օրինակ․ statistics_withCases,), երկրների անունների ցանկ
+    և մեզ վերդարձնում է տարիների ընթացքում ինքնասպանությունների փոփոխվող
+    պրոգրեսիան տվյալ երկրների համար, առկա է նաև լեգենդա՝ հասկանալու համար գրաֆիկը։
+    
+    '''
+
+    stat = statisticsCases[(statisticsCases.year >= startYear) & (statisticsCases.year <=endYear)]
+    plt.rcdefaults()
+    fig, ax = plt.subplots(1)
+    ax.set(xlabel='Years', ylabel='Suicides',
+           title="In "
+           +readable_numbers_for_plot_titles(inpopulation)
+           +' people Suicide cases ' + 'from '
+           + str(startYear)+' to ' + str(endYear))
+    ax.grid()
+        
+    
+    for every_country in country_name_list:
+        localed_stat = stat[stat.country == every_country]
+        for index,row in localed_stat.iterrows():
+            localed_stat.at[index,'suicide_cases'] = localed_stat.suicide_cases[index]/(localed_stat.population[index]/inpopulation)
+            localed_stat.at[index, 'population'] = inpopulation
+        #use this one to show results with line graphics
+        
+        xlabel = localed_stat.iloc[:,2]
+        ylabel = localed_stat.iloc[:,1]
+        ax.plot(xlabel,ylabel)
+    
+    ax.legend(labels  = country_name_list,
+              title="Countries",
+              loc="center left",
+              bbox_to_anchor=(1, 0, 0.5, 1))
+    plt.show()
 
 def show_pie_for_country_suicdecases(year, inpopulation, statisticsCases):
+    
+    '''
+    Ստանում է տարին, ստանում է քանակ թե որքան բնակչության մեջ ստատիստիկա ցույց
+    տա, ստատիստիկաների dataframe-ը (օր․ statistics_withCases) ու վերադարձնում է
+    նշած բնակչության հաշվով սպանությունների թիվը երկրներում (դիագրամի տեսքով)։
+    
+    '''
     stat = statisticsCases[statisticsCases.year == year]
     
     countries_cases = {}
@@ -279,12 +380,12 @@ def show_pie_for_country_suicdecases(year, inpopulation, statisticsCases):
     
     def func(pct, allvals):
         absolute = int(pct/100.*np.sum(allvals))
-        return "{:d} ({:.0f}%)".format(absolute, pct)
+        return "{:d}".format(absolute)
     
     
     wedges, texts, autotexts = ax.pie(data, autopct=lambda pct: func(pct, data),
                                       textprops=dict(color="white"))
-    
+    print(wedges)
     ax.legend(wedges, ingredients,
               title="Countries",
               loc="center left",
@@ -292,17 +393,17 @@ def show_pie_for_country_suicdecases(year, inpopulation, statisticsCases):
     
     plt.setp(autotexts, size=8, weight="bold")
     
-    ax.set_title( f"In {inpopulation} suicide cases in {year}")
+    ax.set_title( f"In {readable_numbers_for_plot_titles(inpopulation)} suicide cases in {year}")
     
     plt.show()
     
 #show statistics with plots and graphics
 create_suicide_statisticsWithCoefficient_plot_for_year(2012, statistics_withCoefficent)
 create_suicide_statisticsWithCases_plot_for_year(2015, 1000000, statistics_withCases)
-show_suicide_statistics_inrange_forcountry(2010,2016,500000,statistics_withCases, 'Armenia')
+show_suicide_statistics_inrange_forcountries(2000,2015,1000000,statistics_withCases, ['Armenia', 'Georgia', 'Russia', 'USA', 'Italy'])
 show_pie_for_country_suicdecases(2015, 1000000, statistics_withCases)
 
 
 #predict example (just change country key name of dictionary to predict and create plots)
-predict_and_createplot_for_country(Countries_df_dic['Armenia'], gender_list, ageGroup_list, 2070)
+predict_and_createplot_for_country(Countries_df_dic['USA'], gender_list, ageGroup_list, 2070)
 
